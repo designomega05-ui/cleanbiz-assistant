@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useSearchParams } from 'react-router-dom';
 import { MessageSquare, Send, X, Sparkles } from 'lucide-react';
 
 export default function WidgetChat() {
-  const [searchParams] = useSearchParams();
-  const businessId = searchParams.get('businessId');
+  const params = new URLSearchParams(window.location.search);
+  const businessId = params.get('businessId');
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);

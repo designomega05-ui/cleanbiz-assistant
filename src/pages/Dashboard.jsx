@@ -19,7 +19,7 @@ export default function Dashboard() {
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: biz } = await supabase.from('businesses').select('*').eq('owner_id', user.id').maybeSingle();
+    const { data: biz } = await supabase.from('businesses').select('*').eq('owner_id', user.id).maybeSingle();
     if (biz) setBusiness(biz);
     const { data: leadsData } = await supabase
       .from('leads').select('*, service_types:service_type_id(name, label)')

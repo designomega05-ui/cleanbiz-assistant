@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
-  LayoutDashboard, Users, Settings as SettingsIcon, 
+  LayoutDashboard, Settings as SettingsIcon, 
   MessageSquare, LogOut, Menu, X, SprayCan 
 } from 'lucide-react';
 import { useState } from 'react';
@@ -36,7 +36,7 @@ export default function Layout({ children }) {
       </div>
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-40 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 z-40 h-full w-64 bg-white border-r border-gray-200 transition-transform duration-200 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-200">
           <SprayCan className="h-7 w-7 text-indigo-600" />
           <span className="font-bold text-lg text-gray-900">CleanBiz</span>
@@ -48,16 +48,10 @@ export default function Layout({ children }) {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'bg-indigo-50 text-indigo-700' 
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
+              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                  isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}>
                 <Icon className="h-4 w-4" />
                 {item.label}
               </Link>
@@ -66,10 +60,8 @@ export default function Layout({ children }) {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-200">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-          >
+          <button onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900">
             <LogOut className="h-4 w-4" />
             Sign Out
           </button>
@@ -78,12 +70,12 @@ export default function Layout({ children }) {
 
       {/* Overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-30 bg-black/20u-hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-30 bg-black/20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Main content */}
-      <main className="lg:pl-64 pt-14u-lg-pt-0 min-h-screen">
-        <div className="p-4u-md-p-6u-lg-p-8 max-w-7xl mx-auto">
+      <main className="lg:pl-64 pt-14 lg:pt-0 min-h-screen">
+        <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
           {children}
         </div>
       </main>

@@ -8,6 +8,7 @@ import Settings from './pages/Settings';
 import ChatWidget from './pages/ChatWidget';
 import BookingPage from './pages/BookingPage';
 import Login from './pages/Login';
+import WidgetChat from './pages/WidgetChat';
 import Layout from './components/Layout';
 import './index.css';
 
@@ -27,6 +28,11 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Widget route is public — no auth required
+  if (window.location.pathname === '/widget-chat') {
+    return <WidgetChat />;
+  }
 
   if (loading) {
     return (

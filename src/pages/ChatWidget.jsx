@@ -15,7 +15,7 @@ export default function ChatWidget() {
   async function loadBusiness() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
-    const { data: biz } = await supabase.from('businesses').select('*').eq('owner_id', user.id').maybeSingle();
+    const { data } = await supabase.from('businesses').select('*').eq('owner_id', user.id).maybeSingle();
     if (data) {
       setBusiness(data);
       generateEmbedCode(data);
@@ -26,18 +26,21 @@ export default function ChatWidget() {
   function generateEmbedCode(biz) {
     const baseUrl = window.location.origin;
     const code = `<!-- CleanBiz Assistant Widget -->
+<div id="cleanbiz-widget"></div>
 <script>
 (function() {
   var d = document;
-  var s = d.createElement('script');
-  s.src = '${baseUrl}/widget.js';
-  s.async = true;
-  s.dataset.businessId = '${biz.id}';
-  s.dataset.primaryColor = '${biz.chat_widget_config?.primary_color || "#6366f1"}';
-  s.dataset.welcomeMessage = '${(biz.chat_widget_config?.welcome_message || "Hi! Need a cleaning quote?").replace(/'/g, "\\'")}';
-  s.dataset.position = '${biz.chat_widget_config?.position || "bottom-right"}';
-  var firstScript = d.getElementsByTagName('script')[0];
-  firstScript.parentNode.insertBefore(s, firstScript);
+  var container = d.getElementById('cleanbiz-widget');
+  if (!container) {
+    container = d.createElement('div');
+    container.id = 'cleanbiz-widget';
+    d.body.appendChild(container);
+  }
+  var iframe = d.createElement('iframe');
+  iframe.src = '${baseUrl}/widget-chat?businessId=${biz.id}';
+  iframe.style.cssText = 'position:fixed;bottom:0;right:0;width:380px;height:500px;border:none;z-index:999999;max-width:100vw;';
+  iframe.title = 'CleanBiz Chat';
+  container.appendChild(iframe);
 })();
 </script>
 <!-- End CleanBiz Assistant Widget -->`;
@@ -107,10 +110,6 @@ export default function ChatWidget() {
           <li>Leads are captured automatically in your CleanBiz dashboard</li>
           <li>You get notified and can follow up from your phone</li>
         </ol>
-        <div className="mt-4 p-3 bg-blue-50 rounded-xl text-xs text-blue-700">
-          <strong>Note:</strong> The embed script (<code className="bg-blue-100 px-1 rounded">widget.js</code>) needs to be built and deployed separately.
-          For now, you can use the preview button above to test lead capture directly.
-        </div>
       </div>
     </div>
   );
@@ -141,7 +140,6 @@ function WidgetPreview({ business }) {
 
   async function handleSend(value) {
     if (!value?.trim()) return;
-
     const newMessages = [...messages, { role: 'user', text: value }];
     setMessages(newMessages);
     const updatedForm = { ...form, [steps[step].field]: value };
@@ -149,9 +147,7 @@ function WidgetPreview({ business }) {
 
     if (step < steps.length - 1) {
       setStep(step + 1);
-      setTimeout(() => {
-        setMessages(prev => [...prev, { role: 'bot', text: steps[step + 1].question }]);
-      }, 500);
+      setTimeout(() => setMessages(prev => [...prev, { role: 'bot', text: steps[step + 1].question }]), 500);
     } else {
       setSaving(true);
       try {
@@ -162,51 +158,41 @@ function WidgetPreview({ business }) {
           setSaving(false);
           return;
         }
-
         let bizId = business?.id;
         if (!bizId) {
-          const { data: biz, error: bizErr } = await supabase
-            .from('businesses').select('id').eq('owner_id', user.id).single();
-          if (bizErr || !biz) {
-            console.error('ChatWidget: No business found:', bizErr);
+          const { data: biz } = await supabase.from('businesses').select('id').eq('owner_id', user.id).maybeSingle();
+          if (!biz) {
+            console.error('ChatWidget: No business found');
             setMessages(prev => [...prev, { role: 'bot', text: "⚠️ Error: Complete the Setup Wizard first." }]);
             setSaving(false);
             return;
           }
           bizId = biz.id;
         }
-
         let serviceTypeId = null;
         if (updatedForm.service) {
           const serviceName = steps[3].options.find(o => o.label === updatedForm.service)?.value;
           if (serviceName) {
-            const { data: st } = await supabase
-              .from('service_types').select('id').eq('name', serviceName).single();
+            const { data: st } = await supabase.from('service_types').select('id').eq('name', serviceName).maybeSingle();
             if (st) serviceTypeId = st.id;
           }
         }
-
         const { error: insertError } = await supabase.from('leads').insert({
           business_id: bizId,
           name: updatedForm.name,
           phone: updatedForm.phone,
           email: updatedForm.email,
           service_type_id: serviceTypeId,
-          source: 'chat',
-          status: 'new',
-          lead_score: 'warm',
+          source: 'chat', status: 'new', lead_score: 'warm',
           qualification_answers: { service: updatedForm.service }
         });
-
         if (insertError) {
           console.error('ChatWidget: Lead insert failed:', insertError);
           setMessages(prev => [...prev, { role: 'bot', text: `⚠️ Error: ${insertError.message}` }]);
         } else {
           console.log('ChatWidget: Lead saved successfully:', updatedForm.name);
           setSaved(true);
-          setTimeout(() => {
-            setMessages(prev => [...prev, { role: 'bot', text: "✅ Thanks! We'll reach out with a quote shortly." }]);
-          }, 500);
+          setTimeout(() => setMessages(prev => [...prev, { role: 'bot', text: "✅ Thanks! We'll reach out with a quote shortly." }]), 500);
         }
       } catch (err) {
         console.error('ChatWidget: Unexpected error:', err);
@@ -228,7 +214,6 @@ function WidgetPreview({ business }) {
           <MessageSquare className="h-6 w-6" />
         </button>
       )}
-
       {open && (
         <div className="absolute bottom-4 right-4 w-72 sm:w-80 bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col" style={{ maxHeight: '340px' }}>
           <div className="flex items-center justify-between px-4 py-3 rounded-t-2xl text-white" style={{ backgroundColor: primaryColor }}>
@@ -236,36 +221,29 @@ function WidgetPreview({ business }) {
               <Sparkles className="h-4 w-4" />
               <span className="text-sm font-medium">CleanBiz</span>
             </div>
-            <button onClick={() => setOpen(false)} className="p-1 hover:opacity-80">
-              <X className="h-4 w-4" />
-            </button>
+            <button onClick={() => setOpen(false)} className="p-1 hover:opacity-80"><X className="h-4 w-4" /></button>
           </div>
-
           <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[180px]">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-xl px-3 py-1.5 text-sm ${
-                  msg.role === 'user' ? 'text-white' : 'bg-gray-100 text-gray-800'
-                }`} style={msg.role === 'user' ? { backgroundColor: primaryColor } : {}}>
+                <div className={`max-w-[85%] rounded-xl px-3 py-1.5 text-sm ${msg.role === 'user' ? 'text-white' : 'bg-gray-100 text-gray-800'}`}
+                  style={msg.role === 'user' ? { backgroundColor: primaryColor } : {}}>
                   {msg.text}
                 </div>
               </div>
             ))}
-            {saving && <div className="flex justify-center"><div className="text-xs text-gray-400 animate-pulse">Saving lead...</div></div>}
-            {saved && <div className="flex justify-center"><div className="text-xs text-green-600 font-medium">✓ Lead saved!</div></div>}
-            
+            {saving && <div className="text-center text-xs text-gray-400 animate-pulse">Saving lead...</div>}
+            {saved && <div className="text-center text-xs text-green-600 font-medium">✓ Lead saved!</div>}
             {step < steps.length && !saved && (
               <div className="flex gap-1.5 flex-wrap mt-1">
                 {steps[step].options?.map(opt => (
                   <button key={opt.value} onClick={() => handleSend(opt.label)}
-                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs hover:bg-gray-50">
-                    {opt.label}
-                  </button>
+                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs hover:bg-gray-50">{opt.label}</button>
                 ))}
                 {!steps[step].options && (
                   <div className="flex gap-1 mt-1 w-full">
                     <input ref={inputRef}
-                      onKeyDown={e => { if(e.key === 'Enter') handleSend(e.target.value); }}
+                      onKeyDown={e => { if(e.key === 'Enter') { handleSend(e.target.value); e.target.value = ''; } }}
                       placeholder="Type your answer..."
                       className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-indigo-400" />
                     <button onClick={() => handleSend(inputRef.current?.value)}

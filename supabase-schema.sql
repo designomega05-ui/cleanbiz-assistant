@@ -150,13 +150,16 @@ CREATE POLICY "Users can only access their own business" ON businesses
   FOR ALL USING (owner_id = auth.uid());
 
 CREATE POLICY "Users can only access their own leads" ON leads
-  FOR ALL USING (business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid()));
+  FOR ALL USING (business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid()))
+  WITH CHECK (business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid()));
 
 CREATE POLICY "Users can access conversations from their leads" ON conversations
-  FOR ALL USING (lead_id IN (SELECT id FROM leads WHERE business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid())));
+  FOR ALL USING (lead_id IN (SELECT id FROM leads WHERE business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid())))
+  WITH CHECK (lead_id IN (SELECT id FROM leads WHERE business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid())));
 
 CREATE POLICY "Users can access their own bookings" ON bookings
-  FOR ALL USING (lead_id IN (SELECT id FROM leads WHERE business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid())));
+  FOR ALL USING (lead_id IN (SELECT id FROM leads WHERE business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid())))
+  WITH CHECK (lead_id IN (SELECT id FROM leads WHERE business_id IN (SELECT id FROM businesses WHERE owner_id = auth.uid())));
 
 -- Seed default service types
 INSERT INTO service_types (name, label, icon) VALUES

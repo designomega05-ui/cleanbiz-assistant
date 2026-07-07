@@ -15,7 +15,7 @@ export default function ChatWidget() {
   async function loadBusiness() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
-    const { data } = await supabase.from('businesses').select('*').eq('owner_id', user.id).single();
+    const { data: biz } = await supabase.from('businesses').select('*').eq('owner_id', user.id').maybeSingle();
     if (data) {
       setBusiness(data);
       generateEmbedCode(data);
